@@ -13,39 +13,29 @@ function logError(api, message, error) {
 }
 
 /**
- * Walk backward from the end to find where the current "turn" starts.
- * A turn is: [user message, (toolResult|assistant)*, final assistant]
- * We skip trailing assistant/toolResult messages to find the user message.
+ * Walk backward from the end to find where the current turn starts.
+ * A turn begins at the user message that triggered the agent response.
+ * Walks back past trailing assistant and toolResult messages.
  *
- * If the pattern doesn't end in user (e.g. system-triggered cron runs),
- * we fall back to just the last 2 messages.
+ * Falls back to (length - 2) for system-triggered cron runs that have no user message.
  */
 function findCurrentTurnStart(messages) {
     if (!messages || messages.length === 0) return 0;
+
+    // Walk backward past assistant and toolResult messages to find the user message
     let i = messages.length - 1;
-
-    // Phase 1: Skip trailing assistant messages
-    while (i >= 0 && messages[i]?.role === "assistant") i--;
-    // Phase 2: Skip toolResult messages (multi-step tool use)
-    while (i >= 0 && messages[i]?.role === "toolResult") i--;
-    // Phase 3: If there are more assistant/toolResult pairs, keep skipping
-    //          (handles assistant→tool→assistant→tool chains)
-    while (i >= 0 && (messages[i]?.role === "assistant" || messages[i]?.role === "toolResult")) i--;
-
-    // After skipping, messages[i] should be "user" if this is a normal turn
-    // If i+1 has role=user, that's our turn start
-    const candidate = i + 1;
-    if (candidate >= 0 && candidate < messages.length && messages[candidate]?.role === "user") {
-        // Intentionally DON'T subtract 1 here - candidate IS the user message
-        return candidate;
+    while (i > 0) {
+        const role = messages[i]?.role ?? messages[i]?.message?.role;
+        if (role === "user") break;
+        i--;
     }
 
-    // i itself might be the user message (if the while loops went one too far)
-    if (i >= 0 && messages[i]?.role === "user") {
+    // If we landed on a user message, that's the turn start
+    if ((messages[i]?.role ?? messages[i]?.message?.role) === "user") {
         return i;
     }
 
-    // Fallback: no user message found (cron/system trigger) - save last 2
+    // No user message found (cron/system trigger) — save last 2 messages
     return Math.max(0, messages.length - 2);
 }
 
