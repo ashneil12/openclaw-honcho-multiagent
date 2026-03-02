@@ -1,0 +1,39 @@
+{
+  "id": "openclaw-honcho",
+  "kind": "memory",
+  "uiHints": {
+    "apiKey": {
+      "label": "Honcho API Key",
+      "sensitive": true,
+      "placeholder": "hch-v3-...",
+      "help": "API key for Honcho memory service (or use ${HONCHO_API_KEY})"
+    },
+    "baseUrl": {
+      "label": "Base URL",
+      "placeholder": "https://api.honcho.dev",
+      "help": "Honcho API base URL",
+      "advanced": true
+    },
+    "workspaceId": {
+      "label": "Workspace ID",
+      "placeholder": "openclaw",
+      "help": "Honcho workspace/app identifier",
+      "advanced": true
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "apiKey": {
+        "type": "string"
+      },
+      "baseUrl": {
+        "type": "string"
+      },
+      "workspaceId": {
+        "type": "string"
+      }
+    }
+  }
+}
