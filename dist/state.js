@@ -28,7 +28,12 @@ export function createPluginState(api) {
         ensureInitialized,
         getAgentPeer,
         resolveDefaultAgentId,
+        isMainAgent,
     };
+    function isMainAgent(agentId) {
+        const id = (agentId || "").toLowerCase().trim();
+        return !id || id === resolveDefaultAgentId();
+    }
     function resolveDefaultAgentId() {
         const agents = api.config?.agents?.list;
         if (!Array.isArray(agents) || agents.length === 0)

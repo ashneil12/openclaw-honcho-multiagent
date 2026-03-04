@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
 export function registerSearchTool(api, state) {
-    api.registerTool({
+    api.registerTool((toolCtx) => ({
         name: "honcho_search",
         label: "Search Honcho Memory",
         description: `Semantic vector search over Honcho's stored observations. Returns raw memories ranked by relevance — no LLM
@@ -50,7 +50,13 @@ Use honcho_search if you want the raw evidence to reason over yourself.`,
         async execute(_toolCallId, params) {
             const { query, topK, maxDistance } = params;
             await state.ensureInitialized();
-            const representation = await state.ownerPeer.representation({
+            const isMain = state.isMainAgent(toolCtx.agentId);
+            // Main agent: search across all memories (ownerPeer)
+            // Sub-agent: search only own memories (agentPeer)
+            const sourcePeer = isMain
+                ? state.ownerPeer
+                : await state.getAgentPeer(toolCtx.agentId);
+            const representation = await sourcePeer.representation({
                 searchQuery: query,
                 searchTopK: topK ?? 10,
                 searchMaxDistance: maxDistance ?? 0.5,
@@ -71,5 +77,5 @@ Use honcho_search if you want the raw evidence to reason over yourself.`,
                 details: undefined,
             };
         },
-    }, { name: "honcho_search" });
+    }), { name: "honcho_search" });
 }

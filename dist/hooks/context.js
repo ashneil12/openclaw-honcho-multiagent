@@ -6,6 +6,7 @@ export function registerContextHook(api, state) {
         const sessionKey = buildSessionKey(ctx);
         const agentId = ctx.agentId ?? state.resolveDefaultAgentId();
         const isSubagent = isSubagentSession(ctx);
+        const isMain = state.isMainAgent(agentId);
         try {
             await state.ensureInitialized();
             const agentPeer = await state.getAgentPeer(agentId);
@@ -30,12 +31,15 @@ export function registerContextHook(api, state) {
             }
             else {
                 const session = await state.honcho.session(sessionKey, { metadata: { agentId } });
+                // Main agent: get context from ownerPeer perspective (sees all)
+                // Sub-agent: get context from own agentPeer perspective (sees only own memories)
+                const peerTarget = isMain ? state.ownerPeer : agentPeer;
                 let context;
                 try {
                     context = await session.context({
                         summary: true,
                         tokens: 2000,
-                        peerTarget: state.ownerPeer,
+                        peerTarget: peerTarget,
                         peerPerspective: agentPeer,
                     });
                 }
@@ -54,6 +58,15 @@ export function registerContextHook(api, state) {
                 }
                 if (context.summary?.content) {
                     sections.push(`Earlier in this conversation:\n${context.summary.content}`);
+                }
+                // Sub-agents also get the shared user profile for identity awareness
+                if (!isMain) {
+                    try {
+                        const userCard = await state.ownerPeer.card().catch(() => null);
+                        if (userCard?.length) {
+                            sections.push(`User profile:\n${userCard.map((f) => `• ${f}`).join("\n")}`);
+                        }
+                    } catch {}
                 }
             }
             if (sections.length === 0)

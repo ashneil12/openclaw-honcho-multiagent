@@ -1,6 +1,6 @@
 import { Type } from "@sinclair/typebox";
 export function registerContextTool(api, state) {
-    api.registerTool({
+    api.registerTool((toolCtx) => ({
         name: "honcho_context",
         label: "Get Broad Context",
         description: `Retrieve Honcho's full representation — everything known about this user ACROSS ALL SESSIONS.
@@ -44,10 +44,29 @@ Parameters:
         async execute(_toolCallId, params) {
             const { includeMostFrequent } = params;
             await state.ensureInitialized();
-            const representation = await state.ownerPeer.representation({
+            const isMain = state.isMainAgent(toolCtx.agentId);
+            // Main agent: read from ownerPeer (cross-read all agents' memories)
+            // Sub-agent: read from own agentPeer (only own memories)
+            const sourcePeer = isMain
+                ? state.ownerPeer
+                : await state.getAgentPeer(toolCtx.agentId);
+            const representation = await sourcePeer.representation({
                 includeMostFrequent: includeMostFrequent ?? true,
             });
-            if (!representation) {
+            const sections = [];
+            // All agents get the shared user profile facts
+            if (!isMain) {
+                try {
+                    const userCard = await state.ownerPeer.card().catch(() => null);
+                    if (userCard?.length) {
+                        sections.push(`## User Profile\n\n${userCard.map((f) => `• ${f}`).join("\n")}`);
+                    }
+                } catch {}
+            }
+            if (representation) {
+                sections.push(`## ${isMain ? "User" : "My"} Context\n\n${representation}`);
+            }
+            if (sections.length === 0) {
                 return {
                     content: [
                         {
@@ -59,9 +78,9 @@ Parameters:
                 };
             }
             return {
-                content: [{ type: "text", text: `## User Context\n\n${representation}` }],
+                content: [{ type: "text", text: sections.join("\n\n") }],
                 details: undefined,
             };
         },
-    }, { name: "honcho_context" });
+    }), { name: "honcho_context" });
 }

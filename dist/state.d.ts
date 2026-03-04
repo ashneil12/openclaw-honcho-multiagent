@@ -19,5 +19,6 @@ export type PluginState = {
     ensureInitialized: () => Promise<void>;
     getAgentPeer: (agentId?: string) => Promise<Peer>;
     resolveDefaultAgentId: () => string;
+    isMainAgent: (agentId?: string) => boolean;
 };
 export declare function createPluginState(api: OpenClawPluginApi): PluginState;

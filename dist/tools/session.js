@@ -58,7 +58,9 @@ Parameters:
             const { includeMessages = true, includeSummary = true, searchQuery, messageLimit = 4000, sessionKey: sessionKeyParam, } = params;
             await state.ensureInitialized();
             const agentPeer = await state.getAgentPeer(toolCtx.agentId);
-            const sessionKey = sessionKeyParam ?? buildSessionKey(toolCtx);
+            const isMain = state.isMainAgent(toolCtx.agentId);
+            // Sub-agents cannot override sessionKey — prevents reading other agents' sessions
+            const sessionKey = (isMain && sessionKeyParam) ? sessionKeyParam : buildSessionKey(toolCtx);
             try {
                 const session = await state.honcho.session(sessionKey);
                 const context = await session.context({
