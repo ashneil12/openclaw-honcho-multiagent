@@ -56,12 +56,10 @@ Parameters:
             const sections = [];
             // All agents get the shared user profile facts
             if (!isMain) {
-                try {
-                    const userCard = await state.ownerPeer.card().catch(() => null);
-                    if (userCard?.length) {
-                        sections.push(`## User Profile\n\n${userCard.map((f) => `• ${f}`).join("\n")}`);
-                    }
-                } catch {}
+                const userCard = await state.ownerPeer.card().catch(() => null);
+                if (userCard?.length) {
+                    sections.push(`## User Profile\n\n${userCard.map((f) => `• ${f}`).join("\n")}`);
+                }
             }
             if (representation) {
                 sections.push(`## ${isMain ? "User" : "My"} Context\n\n${representation}`);

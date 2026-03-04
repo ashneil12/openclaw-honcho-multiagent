@@ -61,12 +61,10 @@ export function registerContextHook(api, state) {
                 }
                 // Sub-agents also get the shared user profile for identity awareness
                 if (!isMain) {
-                    try {
-                        const userCard = await state.ownerPeer.card().catch(() => null);
-                        if (userCard?.length) {
-                            sections.push(`User profile:\n${userCard.map((f) => `• ${f}`).join("\n")}`);
-                        }
-                    } catch {}
+                    const userCard = await state.ownerPeer.card().catch(() => null);
+                    if (userCard?.length) {
+                        sections.push(`User profile:\n${userCard.map((f) => `• ${f}`).join("\n")}`);
+                    }
                 }
             }
             if (sections.length === 0)

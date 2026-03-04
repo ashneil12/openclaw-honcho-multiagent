@@ -1,5 +1,5 @@
 import { OWNER_ID } from "../state.js";
-import { buildSessionKey, isSubagentSession, extractParentAgentKey, extractMessages, cleanMessageContent } from "../helpers.js";
+import { buildSessionKey, isSubagentSession, extractParentAgentKey, extractMessages } from "../helpers.js";
 
 function logError(api, message, error) {
     try { api.logger.error?.(message); } catch {}

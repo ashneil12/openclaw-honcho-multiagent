@@ -40,6 +40,7 @@ export function extractParentAgentKey(sessionKey) {
  * so control tokens are never persisted or re-surfaced as user-visible text.
  */
 export function cleanMessageContent(content) {
+    if (typeof content !== "string") return "";
     let cleaned = content;
     cleaned = cleaned.replace(/<honcho-memory[^>]*>[\s\S]*?<\/honcho-memory>\s*/gi, "");
     cleaned = cleaned.replace(/<!--[^>]*honcho[^>]*-->\s*/gi, "");

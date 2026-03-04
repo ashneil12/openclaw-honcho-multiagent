@@ -63,10 +63,13 @@ Parameters:
             const sessionKey = (isMain && sessionKeyParam) ? sessionKeyParam : buildSessionKey(toolCtx);
             try {
                 const session = await state.honcho.session(sessionKey);
+                // Main agent: full cross-read via ownerPeer
+                // Sub-agent: scoped to own agentPeer
+                const peerTarget = isMain ? state.ownerPeer : agentPeer;
                 const context = await session.context({
                     summary: includeSummary,
                     tokens: messageLimit,
-                    peerTarget: state.ownerPeer,
+                    peerTarget: peerTarget,
                     peerPerspective: agentPeer,
                     searchQuery: searchQuery,
                 });

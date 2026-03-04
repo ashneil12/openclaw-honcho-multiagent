@@ -17,6 +17,8 @@ export function createPluginState(api) {
         baseURL: cfg.baseUrl,
         workspaceId: cfg.workspaceId,
     });
+    let _initPromise = null;
+    let _cachedDefaultAgentId = null;
     const state = {
         honcho,
         cfg,
@@ -35,28 +37,43 @@ export function createPluginState(api) {
         return !id || id === resolveDefaultAgentId();
     }
     function resolveDefaultAgentId() {
+        if (_cachedDefaultAgentId) return _cachedDefaultAgentId;
         const agents = api.config?.agents?.list;
         if (!Array.isArray(agents) || agents.length === 0)
             return "main";
         const defaultAgent = agents.find((a) => a?.default) ?? agents[0];
-        return (defaultAgent?.id ?? "main").toLowerCase().trim() || "main";
+        _cachedDefaultAgentId = (defaultAgent?.id ?? "main").toLowerCase().trim() || "main";
+        return _cachedDefaultAgentId;
     }
     async function ensureInitialized() {
         if (state.initialized)
             return;
-        const wsMeta = await honcho.getMetadata();
-        state.agentPeerMap = wsMeta.agentPeerMap ?? {};
-        const defaultId = resolveDefaultAgentId();
-        if (Object.keys(state.agentPeerMap).length === 0) {
-            state.agentPeerMap[defaultId] = `agent-${defaultId}`;
-            await honcho.setMetadata({ ...wsMeta, agentPeerMap: state.agentPeerMap });
-        }
-        else if (Object.values(state.agentPeerMap).includes(LEGACY_PEER_ID) && !state.agentPeerMap[defaultId]) {
-            state.agentPeerMap[defaultId] = LEGACY_PEER_ID;
-            await honcho.setMetadata({ ...wsMeta, agentPeerMap: state.agentPeerMap });
-        }
-        state.ownerPeer = await honcho.peer(OWNER_ID, { metadata: {} });
-        state.initialized = true;
+        // Guard against concurrent callers — only the first call runs init,
+        // subsequent calls await the same promise.
+        if (_initPromise)
+            return _initPromise;
+        _initPromise = (async () => {
+            try {
+                const wsMeta = await honcho.getMetadata();
+                state.agentPeerMap = wsMeta.agentPeerMap ?? {};
+                const defaultId = resolveDefaultAgentId();
+                if (Object.keys(state.agentPeerMap).length === 0) {
+                    state.agentPeerMap[defaultId] = `agent-${defaultId}`;
+                    await honcho.setMetadata({ ...wsMeta, agentPeerMap: state.agentPeerMap });
+                }
+                else if (Object.values(state.agentPeerMap).includes(LEGACY_PEER_ID) && !state.agentPeerMap[defaultId]) {
+                    state.agentPeerMap[defaultId] = LEGACY_PEER_ID;
+                    await honcho.setMetadata({ ...wsMeta, agentPeerMap: state.agentPeerMap });
+                }
+                state.ownerPeer = await honcho.peer(OWNER_ID, { metadata: {} });
+                state.initialized = true;
+            } catch (err) {
+                // Reset so a future call can retry on transient failure
+                _initPromise = null;
+                throw err;
+            }
+        })();
+        return _initPromise;
     }
     async function getAgentPeer(agentId) {
         const id = (agentId || resolveDefaultAgentId()).toLowerCase().trim() || "main";

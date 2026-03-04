@@ -263,10 +263,14 @@ export function registerCli(api, state) {
             .description("Semantic search over Honcho memory")
             .option("-k, --top-k <number>", "Number of results to return", "10")
             .option("-d, --max-distance <number>", "Maximum semantic distance (0-1)", "0.5")
+            .option("-a, --agent <id>", "Agent ID to search as (default: searches all via owner peer)")
             .action(async (query, options) => {
             try {
                 await state.ensureInitialized();
-                const representation = await state.ownerPeer.representation({
+                const sourcePeer = options.agent
+                    ? await state.getAgentPeer(options.agent)
+                    : state.ownerPeer;
+                const representation = await sourcePeer.representation({
                     searchQuery: query,
                     searchTopK: parseInt(options.topK, 10),
                     searchMaxDistance: parseFloat(options.maxDistance),
